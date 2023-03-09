@@ -1,0 +1,83 @@
+---
+- name: Configure Pritunl server
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Upgrade packages
+      apt:
+        upgrade: yes
+
+    - name: Install required packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - wget
+        - vim
+        - curl
+        - gnupg2
+        - software-properties-common
+        - apt-transport-https
+        - ca-certificates
+        - lsb-release
+
+    - name: Add Pritunl repository
+      copy:
+        dest: /etc/apt/sources.list.d/pritunl.list
+        content: |
+          deb https://repo.pritunl.com/stable/apt jammy main
+
+    - name: Add Pritunl repository key
+      apt_key:
+        url: https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x7568D9BB55FF9E5287D586017AE645C0CF8E292A
+        state: present
+
+    - name: Add Ubuntu security repository
+      copy:
+        dest: /etc/apt/sources.list.d/focal-security.list
+        content: |
+          deb http://security.ubuntu.com/ubuntu focal-security main
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install libssl1.1
+      apt:
+        name: libssl1.1
+        state: present
+
+    - name: Add MongoDB repository key
+      apt_key:
+        url: https://www.mongodb.org/static/pgp/server-6.0.asc
+        state: present
+
+    - name: Add MongoDB repository
+      copy:
+        dest: /etc/apt/sources.list.d/mongodb-org-6.0.list
+        content: |
+          deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Pritunl and MongoDB
+      apt:
+        name:
+          - pritunl
+          - mongodb-org
+        state: present
+
+    - name: Start Pritunl and MongoDB
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - pritunl
+        - mongod
